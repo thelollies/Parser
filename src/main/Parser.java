@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 
 import javax.swing.JFileChooser;
 
-import nodes.WhileNode;
+import nodes.*;
 
 /** The parser and interpreter.
     The top level parse function, a main method for testing, and several
@@ -90,62 +90,22 @@ public class Parser {
 	 */
 	static RobotProgramNode parseProgram(Scanner s){
 
-
-
+		ProgramNode program = new ProgramNode();
+		NodeProcessor processor = new PrefixProcessor();
+		CodeParser parser = new PrefixParser();
+		
 		while(s.hasNext()){
-			// check for action/loop/if/while
 
-			if(gobble("while", s)){
-				new WhileNode().parse(s);
-			}
-			else if(gobble("if", s)){
-				System.out.println("if");
-			}
-			else if(gobble("loop", s)){
-				System.out.println("loop");
-			}
-			else if(gobble("move", s)){
-				System.out.println("move");
-			}
-			else if(gobble("turnL", s)){
-				System.out.println("turnL");
-			}
-			else if(gobble("turnR", s)){
-				System.out.println("turnR");
-			}
-			else if(gobble("turnAround", s)){
-				System.out.println("turnAround");
-			}
-			else if(gobble("shieldOn", s)){
-				System.out.println("shieldOn");
-			}
-			else if(gobble("shieldOff", s)){
-				System.out.println("shieldOff");
-			}
-			else if(gobble("takeFuel", s)){
-				System.out.println("takeFuel");
-			}
-			else if(gobble("wait", s)){
-				System.out.println("wait");
-			}
-			else{
-				System.out.println("Didn't parse " + s.next());
-			}
-			// then check for actions
-
+			RobotProgramNode node = parser.parse(s, processor);
+			if(node != null)
+				program.addNode(node);
+			else
+				System.out.println("Parsing Error");
+			
 		}
 
-
-
-		return null;     // just so it will compile!!
+		return program;
 	}
-
-
-
-
-
-
-
 
 	//utility methods for the parser
 	/**

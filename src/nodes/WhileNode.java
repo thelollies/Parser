@@ -2,42 +2,45 @@ package nodes;
 
 import java.util.Scanner;
 
-import main.Parser;
+import main.CodeParser;
+import main.NodeProcessor;
 import main.Robot;
 import main.RobotProgramNode;
 
-public class WhileNode implements RobotProgramNode, ExecutableNode{
+public class WhileNode implements RobotProgramNode, StatementNode{
 
-	private ConditionNode condition;
+	private Conditional conditional;
 	private BlockNode block;
 
 	@Override
 	public void execute(Robot robot) {
-		if(condition.isTrue()){
+		while(conditional.evaluate(robot))
 			block.execute(robot);
-		}
+		
 	}
 
 	@Override
 	public String toString() {
-		StringBuilder whileString = new StringBuilder("while ( ");
-		whileString.append(condition.toString());
-		whileString.append(" ) ");
-		whileString.append(block.toString());
-		return super.toString();
+		StringBuilder sb = new StringBuilder("while (");
+		sb.append(conditional.toString());
+		sb.append(")");
+		sb.append(block.toString());
+		return sb.toString();
 	}
-
+	
 	@Override
-	public WhileNode parse(Scanner s) {
-
-		Parser.gobble(Parser.OPENPAREN, s);
-		condition = new ConditionNode();
-		condition.parse(s);
-		Parser.gobble(Parser.CLOSEPAREN, s);
-		block = new BlockNode();
-		block.parse(s);
-
+	public WhileNode parse(Scanner s, CodeParser cp, NodeProcessor p) {
+		p.process(s, cp, this);
 		return this;
 	}
+	
+	public void setBlock(BlockNode block){
+		this.block = block;
+	}
+	
+	public void setConditional(Conditional conditional){
+		this.conditional = conditional;
+	}
+
 
 }

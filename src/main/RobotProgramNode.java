@@ -10,7 +10,5 @@ import java.util.Scanner;
 
 public interface RobotProgramNode {
 	public void execute(Robot robot);
-	@Override
-	public String toString();
-	public RobotProgramNode parse(Scanner s);
+	public RobotProgramNode parse(Scanner s, CodeParser cp, NodeProcessor p);
 }
