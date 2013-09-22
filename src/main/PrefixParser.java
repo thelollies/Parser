@@ -1,6 +1,7 @@
 package main;
 
 import java.util.Scanner;
+import java.util.regex.Pattern;
 
 import nodes.*;
 
@@ -42,8 +43,12 @@ public class PrefixParser implements CodeParser{
 		else if(Parser.gobble("wait", s)){
 			return new WaitNode().parse(s, this, p);
 		}
+		else if(s.hasNext(Pattern.compile("\\$[A-Za-z][A-Za-z0-9]*"))){
+			return new VariableAssignmentNode().parse(s, this, p);
+		}
 		
-		System.out.println("Didn't parse " + s.next());
+		
+		Parser.fail("Could not parse statement", s);
 		
 		return null;
 	}

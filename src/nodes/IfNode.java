@@ -1,5 +1,6 @@
 package nodes;
 
+import java.util.ArrayList;
 import java.util.Scanner;
 
 import main.CodeParser;
@@ -12,13 +13,21 @@ public class IfNode implements RobotProgramNode, StatementNode{
 	private Conditional conditional;
 	private BlockNode block;
 	private BlockNode elseBlock;
-	
+	private ArrayList<IfNode> elifs = new ArrayList<IfNode>();
+
 	@Override
 	public void execute(Robot robot) {
 		if(conditional.evaluate(robot))
 			block.execute(robot);
-		else if(elseBlock != null)
+		else{
+			for(IfNode elif : elifs){
+				if(elif.conditional.evaluate(robot)){
+					elif.block.execute(robot);
+					return;
+				}
+			}
 			elseBlock.execute(robot);
+		}
 	}
 
 	@Override
@@ -27,28 +36,37 @@ public class IfNode implements RobotProgramNode, StatementNode{
 		return this;
 	}
 
+	public void addElif(IfNode elif){
+		elifs.add(elif);
+	}
+
 	public void setConditional(Conditional conditional){
 		this.conditional = conditional;
 	}
-	
+
 	public void setBlock(BlockNode block){
 		this.block = block;
 	}
-	
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder("if (");
 		sb.append(conditional.toString());
 		sb.append(")");
 		sb.append(block.toString());
+		for(IfNode elif : elifs){
+			sb.append("el");
+			sb.append(elif.toString());
+		}
+		
 		if(elseBlock != null){
 			sb.append("else");
 			sb.append(elseBlock.toString());
 		}
-		
+
 		return sb.toString();
 	}
-	
+
 	public void setElse(BlockNode elseBlock){
 		this.elseBlock = elseBlock;
 	}

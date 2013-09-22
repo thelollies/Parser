@@ -1,17 +1,27 @@
-move(8);
-turnL; 
-loop {
-while ( or(eq(numBarrels, 0),
-           lt(add(oppFB, oppLR), add(barrelFB,barrelLR))) ) {
-  if (lt(oppFB,0)) { turnAround; }
-  else { if (gt(oppFB,0)) { move(add(1, div(oppFB, 2))); } 
-  else { if (lt(oppLR,0)) { turnL;}
-  else { if (gt(oppLR,0)) { turnR;}
-  else { if (eq(oppLR,0)) { takeFuel; }}}}}
-}
-if ( and(eq(barrelFB, 0),eq(barrelLR, 0))) { takeFuel; }
-else { if ( lt(barrelFB, 0) ){ turnAround; }
-else { if ( gt(barrelFB, 0) ) { move(barrelFB); }
-else { if ( lt(barrelLR, 0) ) { turnL; }
-else { if ( gt(barrelLR, 0) ) { turnR; }}}}}
+while(gt(fuelLeft, 0)){      // loop as long as fuel left is > 0
+    if(eq(numBarrels, 0)){   // if there are no barrels, then  wait
+        wait;
+    } elif ( gt(add(oppFB,oppLR), 3) ) {  //if opponent is close 
+        move(1);                      // (actually a wrong calculation!)
+    } else{            
+        $lr = barrelLR;       // put the relative position of 
+        $fb = barrelFB;       // closest barrel into variables
+        if(and(eq($lr, 0), eq($fb, 0))){   // if robot is on top of a barrel
+            takeFuel;                    // take the fuel
+        } else{
+            if(eq($fb, 0)){        // otherwise turn and move
+                if(lt($lr, 0)){    //  towards the closest barrel
+                    turnL; 
+                } else{
+                    turnR;
+                }
+            } else{
+                if(gt($fb, 0)){
+                    move;
+                } else{
+                    turnAround;
+                }
+            }
+        }
+    }
 }

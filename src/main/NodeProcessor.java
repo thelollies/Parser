@@ -20,4 +20,5 @@ public interface NodeProcessor {
 	public void process(Scanner s, CodeParser cp, Conditional n);
 	public void process(Scanner s, CodeParser cp, IfNode n);
 	public void process(Scanner s, CodeParser cp, OperationNode n);
+	public void process(Scanner s, CodeParser cp, VariableAssignmentNode n);
 }

@@ -10,24 +10,38 @@ import nodes.SensorNode.SensorType;
 
 public class PrefixProcessor implements NodeProcessor{
 
-	private Pattern lt = Pattern.compile("lt");
-	private Pattern gt = Pattern.compile("gt");
-	private Pattern eq = Pattern.compile("eq");
-	private Pattern and = Pattern.compile("and");
-	private Pattern or = Pattern.compile("or");
-	private Pattern not = Pattern.compile("not");
-	private Pattern comma = Pattern.compile("( )*,( )*");
-	private Pattern elsePattern = Pattern.compile("else");
-	private Pattern add = Pattern.compile("add");
-	private Pattern subtract = Pattern.compile("sub");
-	private Pattern multiply = Pattern.compile("mul");
-	private Pattern divide = Pattern.compile("div");
+	private ProgramNode program;
+
+	private static Pattern lt = Pattern.compile("lt");
+	private static Pattern gt = Pattern.compile("gt");
+	private static Pattern eq = Pattern.compile("eq");
+	private static Pattern and = Pattern.compile("and");
+	private static Pattern or = Pattern.compile("or");
+	private static Pattern not = Pattern.compile("not");
+	private static Pattern comma = Pattern.compile("( )*,( )*");
+	private static Pattern elsePattern = Pattern.compile("else");
+	private static Pattern elseIfPattern = Pattern.compile("elif");
+	private static Pattern add = Pattern.compile("add");
+	private static Pattern subtract = Pattern.compile("sub");
+	private static Pattern multiply = Pattern.compile("mul");
+	private static Pattern divide = Pattern.compile("div");
+	private static Pattern variable = Pattern.compile("\\$[A-Za-z][A-Za-z0-9]*");
+	private static Pattern equals = Pattern.compile("( )*=( )*");
+	private static Pattern comment = Pattern.compile("//[A-Za-z0-9]*");
+
+	public PrefixProcessor(ProgramNode program){
+		this.program = program;
+	}
 
 	@Override
 	public void process(Scanner s, CodeParser cp, BlockNode n) {
 		Parser.gobble(Parser.OPENBRACE, s);
 		while(!Parser.gobble(Parser.CLOSEBRACE, s)){
 
+			if(Parser.gobble(comment, s)){
+				s.nextLine();
+				continue;
+			}
 			RobotProgramNode node = cp.parse(s, this);
 			if(node instanceof StatementNode){
 				StatementNode statement = (StatementNode) node;
@@ -61,8 +75,8 @@ public class PrefixProcessor implements NodeProcessor{
 	@Override
 	public void process(Scanner s, CodeParser cp, MoveNode n) {
 		if(Parser.gobble(Parser.OPENPAREN, s)){
-			n.setExpression(parseExpression(s, cp, this));
-			
+			n.setExpression(parseExpression(program, s, cp, this));
+
 			if(!Parser.gobble(Parser.CLOSEPAREN, s))
 				Parser.fail("Missing closing ) in move with args", s);
 		}
@@ -111,8 +125,8 @@ public class PrefixProcessor implements NodeProcessor{
 	public void process(Scanner s, CodeParser cp, WaitNode n) {
 
 		if(Parser.gobble(Parser.OPENPAREN, s)){
-			n.setExpression(parseExpression(s, cp, this));
-			
+			n.setExpression(parseExpression(program, s, cp, this));
+
 			if(!Parser.gobble(Parser.CLOSEPAREN, s))
 				Parser.fail("Missing closing ) in wait with args", s);
 		}
@@ -173,12 +187,12 @@ public class PrefixProcessor implements NodeProcessor{
 			}
 		}
 		else{
-			condition.setArgOne(parseExpression(s, cp, this));
+			condition.setArgOne(parseExpression(program, s, cp, this));
 
 			if(!Parser.gobble(comma, s))
 				Parser.fail("No comma in conditional", s);
 
-			condition.setArgTwo(parseExpression(s, cp, this));
+			condition.setArgTwo(parseExpression(program, s, cp, this));
 		}
 
 		n.setCondition(condition);
@@ -199,6 +213,21 @@ public class PrefixProcessor implements NodeProcessor{
 
 		n.setBlock((BlockNode)new BlockNode().parse(s, cp, this));
 
+		while(Parser.gobble(elseIfPattern, s)){
+			if(!Parser.gobble(Parser.OPENPAREN, s))
+				Parser.fail("No opening parenthesis on elif", s);
+			
+			IfNode elif = new IfNode();
+			elif.setConditional(new Conditional().parse(s, cp, this));
+			
+			if(!Parser.gobble(Parser.CLOSEPAREN, s))
+				Parser.fail("No closing parenthesis in elif statement", s);
+			
+			elif.setBlock((BlockNode)new BlockNode().parse(s, cp, this));
+			
+			n.addElif(elif);
+		}
+		
 		if(Parser.gobble(elsePattern, s)){
 			n.setElse((BlockNode)new BlockNode().parse(s, cp, this));
 		}
@@ -220,19 +249,19 @@ public class PrefixProcessor implements NodeProcessor{
 		if(!Parser.gobble(Parser.OPENPAREN, s))
 			Parser.fail("No opening parenthesis in operation", s);
 
-		n.setArgOne(parseExpression(s, cp, this));
+		n.setArgOne(parseExpression(program, s, cp, this));
 
 		if(!Parser.gobble(comma, s))
 			Parser.fail("No comma in operation", s);
 
-		n.setArgTwo(parseExpression(s, cp, this));
+		n.setArgTwo(parseExpression(program, s, cp, this));
 
 		// Clean up the closing bracket
 		if(!Parser.gobble(Parser.CLOSEPAREN, s))
 			Parser.fail("No closing ) in operation", s);
 	}
-	
-	private static Expression parseExpression(Scanner s, CodeParser cp, PrefixProcessor p){
+
+	private static Expression parseExpression(ProgramNode program, Scanner s, CodeParser cp, PrefixProcessor p){
 		if(Parser.gobble("fuelLeft", s))
 			return new SensorNode(SensorType.FUELLEFT);
 		else if(Parser.gobble("oppLR", s))
@@ -241,16 +270,50 @@ public class PrefixProcessor implements NodeProcessor{
 			return new SensorNode(SensorType.OPPFB);
 		else if(Parser.gobble("numBarrels", s))
 			return new SensorNode(SensorType.NUMBARRELS);
-		else if(Parser.gobble("barrelLR", s))
-			return new SensorNode(SensorType.BARRELLR);
-		else if(Parser.gobble("barrelFB", s))
-			return new SensorNode(SensorType.BARRELFB);
+		else if(Parser.gobble("barrelLR", s)){
+			SensorNode sensor = new SensorNode(SensorType.BARRELLR);
+			if(Parser.gobble(Parser.OPENPAREN, s)){
+				sensor.setExpression(parseExpression(program, s, cp, p));
+				if(!Parser.gobble(Parser.CLOSEPAREN, s))
+					Parser.fail("Missing closing parenthesis on barrelLR with args", s);
+			}
+			return sensor;
+		}
+		else if(Parser.gobble("barrelFB", s)){
+			SensorNode sensor = new SensorNode(SensorType.BARRELFB);
+			if(Parser.gobble(Parser.OPENPAREN, s)){
+				sensor.setExpression(parseExpression(program, s, cp, p));
+				if(!Parser.gobble(Parser.CLOSEPAREN, s))
+					Parser.fail("Missing closing parenthesis on barrelFB with args", s);
+			}
+			return sensor;
+		}
 		else if(Parser.gobble("wallDist", s))
 			return new SensorNode(SensorType.WALLDIST);
+		else if(s.hasNext(variable))
+			return new VariableNode(program, s.next(variable));
 		else if(s.hasNext(Parser.NUMPAT))
 			return new NumberNode(Double.parseDouble(s.next(Parser.NUMPAT)));
 		else
 			return new OperationNode().parse(s, cp, p);
+	}
+
+	@Override
+	public void process(Scanner s, CodeParser cp, VariableAssignmentNode n) {
+		n.setProgram(program);
+
+		if(!s.hasNext(variable))
+			Parser.fail("Invalid variable name", s);
+
+		n.setName(s.next(variable).replace("$",""));
+
+		if(!Parser.gobble(equals, s))
+			Parser.fail("No = in variable assignment", s);
+
+		n.setExpression(parseExpression(program, s, cp, this));
+		
+		if(!Parser.gobble(";", s))
+			Parser.fail("Missing ; in variable declaration", s);
 	}
 
 }

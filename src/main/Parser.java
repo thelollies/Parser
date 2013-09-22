@@ -91,7 +91,7 @@ public class Parser {
 	static RobotProgramNode parseProgram(Scanner s){
 
 		ProgramNode program = new ProgramNode();
-		NodeProcessor processor = new PrefixProcessor();
+		NodeProcessor processor = new PrefixProcessor(program);
 		CodeParser parser = new PrefixParser();
 		
 		while(s.hasNext()){
@@ -100,7 +100,7 @@ public class Parser {
 			if(node != null)
 				program.addNode(node);
 			else
-				System.out.println("Parsing Error");
+				fail("Failed to process node", s);
 			
 		}
 
